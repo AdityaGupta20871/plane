@@ -9,8 +9,9 @@ function keycloakProxy(): Plugin {
   return {
     name: "keycloak-proxy",
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+      const handle = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => {
         if (req.url?.startsWith("/realms") || req.url?.startsWith("/resources")) {
+          console.log(`[keycloak-proxy] >>> ${req.method} ${req.url}`);
           const proxyReq = http.request(
             {
               hostname: "127.0.0.1",
@@ -20,12 +21,13 @@ function keycloakProxy(): Plugin {
               headers: { ...req.headers, host: "127.0.0.1:8080" },
             },
             (proxyRes) => {
+              console.log(`[keycloak-proxy] <<< ${proxyRes.statusCode} ${req.url}`);
               res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
               proxyRes.pipe(res);
             }
           );
           proxyReq.on("error", (err) => {
-            console.error("Keycloak proxy error:", err.message);
+            console.error("[keycloak-proxy] error:", err.message);
             res.statusCode = 502;
             res.end("Bad Gateway");
           });
@@ -33,7 +35,9 @@ function keycloakProxy(): Plugin {
         } else {
           next();
         }
-      });
+      };
+      // Force-insert at top of middleware stack so it runs before React Router SSR
+      server.middlewares.stack.unshift({ route: "", handle: handle as any });
     },
   };
 }
