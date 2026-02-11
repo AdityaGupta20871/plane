@@ -3,11 +3,14 @@
 # See the LICENSE file for details.
 
 # Python imports
+import logging
 import requests
 
 # Django imports
 from django.utils import timezone
 from django.db import DatabaseError, IntegrityError
+
+logger = logging.getLogger(__name__)
 
 # Module imports
 from plane.db.models import Account
@@ -54,6 +57,8 @@ class OauthAdapter(Adapter):
             return "GITLAB_OAUTH_PROVIDER_ERROR"
         elif self.provider == "gitea":
             return "GITEA_OAUTH_PROVIDER_ERROR"
+        elif self.provider == "oidc":
+            return "OIDC_OAUTH_PROVIDER_ERROR"
         else:
             return "OAUTH_NOT_CONFIGURED"
 
@@ -74,20 +79,28 @@ class OauthAdapter(Adapter):
     def get_user_token(self, data, headers=None):
         try:
             headers = headers or {}
+            logger.info(f"[OAuth] Token request to: {self.get_token_url()}")
             response = requests.post(self.get_token_url(), data=data, headers=headers)
+            if response.status_code >= 400:
+                logger.error(f"[OAuth] Token error {response.status_code}: {response.text[:500]}")
             response.raise_for_status()
             return response.json()
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logger.error(f"[OAuth] Token exchange failed: {e}")
             code = self.authentication_error_code()
             raise AuthenticationException(error_code=AUTHENTICATION_ERROR_CODES[code], error_message=str(code))
 
     def get_user_response(self):
         try:
             headers = {"Authorization": f"Bearer {self.token_data.get('access_token')}"}
+            logger.info(f"[OAuth] Userinfo request to: {self.get_user_info_url()}")
             response = requests.get(self.get_user_info_url(), headers=headers)
+            if response.status_code >= 400:
+                logger.error(f"[OAuth] Userinfo error {response.status_code}: {response.text[:500]}")
             response.raise_for_status()
             return response.json()
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logger.error(f"[OAuth] Userinfo request failed: {e}")
             code = self.authentication_error_code()
             raise AuthenticationException(error_code=AUTHENTICATION_ERROR_CODES[code], error_message=str(code))
 
