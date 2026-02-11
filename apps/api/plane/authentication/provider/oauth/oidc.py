@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 
 import pytz
 import requests
+from django.conf import settings
 
 # Module imports
 from plane.authentication.adapter.oauth import OauthAdapter
@@ -70,7 +71,10 @@ class OIDCOAuthProvider(OauthAdapter):
         client_secret = OIDC_CLIENT_SECRET
         self.idp_name = OIDC_IDP_NAME
 
-        redirect_uri = f"""{"https" if request.is_secure() else "http"}://{request.get_host()}/auth/oidc/callback/"""
+        if settings.APP_BASE_URL:
+            redirect_uri = f"{settings.APP_BASE_URL}/auth/oidc/callback/"
+        else:
+            redirect_uri = f"""{"https" if request.is_secure() else "http"}://{request.get_host()}/auth/oidc/callback/"""
         url_params = {
             "client_id": client_id,
             "redirect_uri": redirect_uri,
