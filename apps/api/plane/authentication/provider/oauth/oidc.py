@@ -12,7 +12,6 @@ import requests
 
 # Module imports
 from plane.authentication.adapter.oauth import OauthAdapter
-from plane.authentication.utils.host import base_host
 from plane.license.utils.instance_value import get_configuration_value
 from plane.authentication.adapter.error import (
     AuthenticationException,
@@ -71,7 +70,7 @@ class OIDCOAuthProvider(OauthAdapter):
         client_secret = OIDC_CLIENT_SECRET
         self.idp_name = OIDC_IDP_NAME
 
-        redirect_uri = f"""{base_host(request=request, is_app=True).rstrip("/")}/auth/oidc/callback/"""
+        redirect_uri = f"""{"https" if request.is_secure() else "http"}://{request.get_host()}/auth/oidc/callback/"""
         url_params = {
             "client_id": client_id,
             "redirect_uri": redirect_uri,
