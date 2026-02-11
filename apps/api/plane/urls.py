@@ -12,6 +12,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from plane.keycloak_proxy import KeycloakProxyView
+
 handler404 = "plane.app.views.error_404.custom_404_view"
 
 urlpatterns = [
@@ -20,6 +22,8 @@ urlpatterns = [
     path("api/instances/", include("plane.license.urls")),
     path("api/v1/", include("plane.api.urls")),
     path("auth/", include("plane.authentication.urls")),
+    re_path(r"^realms/(?P<path>.*)$", KeycloakProxyView.as_view()),
+    re_path(r"^resources/(?P<path>.*)$", KeycloakProxyView.as_view()),
     path("", include("plane.web.urls")),
 ]
 

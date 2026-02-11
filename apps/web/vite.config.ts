@@ -1,46 +1,8 @@
-import http from "node:http";
 import path from "node:path";
 import * as dotenv from "@dotenvx/dotenvx";
 import { reactRouter } from "@react-router/dev/vite";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-
-function keycloakProxy(): Plugin {
-  return {
-    name: "keycloak-proxy",
-    configureServer(server) {
-      const handle = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => {
-        if (req.url?.startsWith("/realms") || req.url?.startsWith("/resources")) {
-          console.log(`[keycloak-proxy] >>> ${req.method} ${req.url}`);
-          const proxyReq = http.request(
-            {
-              hostname: "127.0.0.1",
-              port: 8080,
-              path: req.url,
-              method: req.method,
-              headers: { ...req.headers, host: "127.0.0.1:8080" },
-            },
-            (proxyRes) => {
-              console.log(`[keycloak-proxy] <<< ${proxyRes.statusCode} ${req.url}`);
-              res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
-              proxyRes.pipe(res);
-            }
-          );
-          proxyReq.on("error", (err) => {
-            console.error("[keycloak-proxy] error:", err.message);
-            res.statusCode = 502;
-            res.end("Bad Gateway");
-          });
-          req.pipe(proxyReq);
-        } else {
-          next();
-        }
-      };
-      // Force-insert at top of middleware stack so it runs before React Router SSR
-      server.middlewares.stack.unshift({ route: "", handle: handle as any });
-    },
-  };
-}
 
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
@@ -59,7 +21,7 @@ export default defineConfig(() => ({
   build: {
     assetsInlineLimit: 0,
   },
-  plugins: [keycloakProxy(), reactRouter(), tsconfigPaths({ projects: [path.resolve(__dirname, "tsconfig.json")] })],
+  plugins: [reactRouter(), tsconfigPaths({ projects: [path.resolve(__dirname, "tsconfig.json")] })],
   resolve: {
     alias: {
       // Next.js compatibility shims used within web
@@ -77,6 +39,14 @@ export default defineConfig(() => ({
         changeOrigin: false,
       },
       "/auth": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: false,
+      },
+      "/realms": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: false,
+      },
+      "/resources": {
         target: "http://127.0.0.1:8000",
         changeOrigin: false,
       },
