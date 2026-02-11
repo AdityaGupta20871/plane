@@ -218,6 +218,21 @@ services:
   #     - space
   #     - admin
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev
+    restart: unless-stopped
+    networks:
+      - dev_env
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "false"
+    ports:
+      - "8080:8080"
+
 volumes:
   redisdata:
   uploads:
