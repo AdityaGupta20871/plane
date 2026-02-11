@@ -22,12 +22,17 @@ class KeycloakProxyView(View):
         if request.META.get("QUERY_STRING"):
             target_url += f"?{request.META['QUERY_STRING']}"
 
-        # Forward relevant headers
+        # Forward relevant headers, stripping proxy/forwarded headers
+        # so Keycloak always sees itself as http://keycloak:8080
+        # (prevents issuer mismatch between proxy and direct API calls)
+        skip = {"host", "connection", "x-forwarded-for", "x-forwarded-host",
+                "x-forwarded-proto", "x-forwarded-port", "x-forwarded-scheme",
+                "x-real-ip", "forwarded"}
         headers = {}
         for key, value in request.META.items():
             if key.startswith("HTTP_"):
                 header = key[5:].replace("_", "-").title()
-                if header.lower() not in ("host", "connection"):
+                if header.lower() not in skip:
                     headers[header] = value
         if request.content_type:
             headers["Content-Type"] = request.content_type
