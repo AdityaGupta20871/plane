@@ -146,7 +146,6 @@ class OIDCOAuthProvider(OauthAdapter):
         if id_token:
             try:
                 user_info_response = self._decode_jwt_payload(id_token)
-                print(f"[OIDC-DEBUG] id_token claims: sub={user_info_response.get('sub')} email={user_info_response.get('email')}")
             except Exception:
                 user_info_response = self.get_user_response()
         else:

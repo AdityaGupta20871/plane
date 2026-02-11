@@ -74,11 +74,7 @@ class OIDCCallbackEndpoint(View):
         state = request.GET.get("state")
         next_path = request.session.get("next_path") or request.COOKIES.get(OIDC_NEXT_PATH_COOKIE)
 
-        session_state = request.session.get("state", "")
-        cookie_state = request.COOKIES.get(OIDC_STATE_COOKIE, "")
-        expected_state = session_state or cookie_state
-        print(f"[OIDC-DEBUG] url_state={state!r} session_state={session_state!r} cookie_state={cookie_state!r} session_key={request.session.session_key!r}")
-        print(f"[OIDC-DEBUG] cookies_present={list(request.COOKIES.keys())}")
+        expected_state = request.session.get("state", "") or request.COOKIES.get(OIDC_STATE_COOKIE, "")
 
         if state != expected_state:
             exc = AuthenticationException(
@@ -123,7 +119,6 @@ class OIDCCallbackEndpoint(View):
             response.delete_cookie(OIDC_NEXT_PATH_COOKIE)
             return response
         except AuthenticationException as e:
-            print(f"[OIDC-DEBUG] authenticate() failed: code={e.error_code} msg={e.error_message} payload={e.payload}")
             params = e.get_error_dict()
             url = get_safe_redirect_url(
                 base_url=base_host(request=request, is_app=True), next_path=next_path, params=params
