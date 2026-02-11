@@ -3,6 +3,8 @@
 # See the LICENSE file for details.
 
 # Python imports
+import base64
+import json
 import os
 from datetime import datetime
 from urllib.parse import urlencode
@@ -127,8 +129,29 @@ class OIDCOAuthProvider(OauthAdapter):
             }
         )
 
+    @staticmethod
+    def _decode_jwt_payload(token):
+        """Decode JWT payload without signature verification
+        (token already trusted from direct Keycloak exchange)."""
+        payload = token.split(".")[1]
+        padding = 4 - len(payload) % 4
+        if padding != 4:
+            payload += "=" * padding
+        return json.loads(base64.urlsafe_b64decode(payload))
+
     def set_user_data(self):
-        user_info_response = self.get_user_response()
+        # Use id_token claims instead of userinfo endpoint to avoid
+        # issuer mismatch when Keycloak is behind a reverse proxy
+        id_token = self.token_data.get("id_token", "")
+        if id_token:
+            try:
+                user_info_response = self._decode_jwt_payload(id_token)
+                print(f"[OIDC-DEBUG] id_token claims: sub={user_info_response.get('sub')} email={user_info_response.get('email')}")
+            except Exception:
+                user_info_response = self.get_user_response()
+        else:
+            user_info_response = self.get_user_response()
+
         email = user_info_response.get("email")
         if not email:
             raise AuthenticationException(

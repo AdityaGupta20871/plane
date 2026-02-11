@@ -232,8 +232,11 @@ services:
       KC_HOSTNAME_STRICT: "false"
     ports:
       - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
 
 volumes:
+  keycloak_data:
   redisdata:
   uploads:
   pgdata:
